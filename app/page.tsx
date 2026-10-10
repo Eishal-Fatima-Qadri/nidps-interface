@@ -1,90 +1,55 @@
 'use client'
 
+import { useMemo, useState } from 'react'
 import {
-  Activity,
-  Bell,
-  ChevronLeft,
-  ChevronRight,
-  CircleGauge,
-  Cpu,
-  Flame,
-  Gauge,
-  Globe2,
-  Home,
-  Laptop,
-  LockKeyhole,
-  Menu,
-  Network,
-  Settings,
-  Shield,
-  ShieldAlert,
-  Wifi,
+  Activity, AlertTriangle, ArrowUpRight, Ban, Check, ChevronDown, Cpu,
+  Gauge, HardDrive, LayoutDashboard, LockKeyhole, Menu, Network, Search,
+  Settings, Shield, ShieldAlert, Terminal, Wifi, X,
 } from 'lucide-react'
-import { useState } from 'react'
 
-const traffic = [42, 34, 28, 36, 30, 24, 18, 22, 27, 42, 31, 39, 35, 46, 54, 45, 41, 50, 62, 70, 66, 74, 69, 82, 76, 80, 78, 92, 84, 89, 96, 101, 94, 109, 113, 106, 118, 121, 111, 105, 116, 124, 132, 128, 140, 152, 145, 160]
-const suspicious = [8, 6, 5, 8, 4, 7, 5, 6, 7, 12, 9, 11, 8, 15, 16, 13, 12, 18, 15, 24, 20, 29, 25, 34, 28, 31, 26, 42, 37, 39, 45, 36, 42, 48, 51, 44, 49, 56, 42, 38, 51, 45, 58, 62, 54, 67, 59, 72]
-const activity = [
-  [34, 10, 7, 3], [27, 8, 4, 2], [22, 7, 5, 2], [28, 7, 4, 2], [20, 8, 3, 2], [24, 6, 4, 2], [18, 5, 4, 2], [22, 7, 5, 3], [26, 6, 4, 3], [35, 9, 5, 3], [29, 8, 5, 2], [38, 10, 6, 4], [42, 12, 7, 3], [39, 11, 8, 4], [45, 13, 9, 4], [51, 14, 9, 5], [46, 12, 7, 4], [56, 16, 10, 5], [48, 14, 8, 5], [62, 17, 11, 6], [58, 15, 10, 5], [67, 19, 12, 6], [60, 16, 11, 6], [74, 20, 13, 7], [69, 18, 12, 6], [72, 22, 14, 8], [78, 21, 15, 7], [82, 24, 16, 8], [76, 20, 15, 7], [91, 26, 17, 9], [85, 23, 16, 8], [98, 29, 18, 9], [94, 27, 17, 8], [103, 31, 19, 10], [98, 28, 18, 9], [112, 33, 20, 11], [108, 31, 19, 10], [121, 35, 22, 11], [116, 34, 21, 10], [129, 37, 24, 12], [122, 35, 22, 11], [140, 40, 25, 13], [132, 38, 24, 12], [148, 43, 27, 14], [143, 39, 25, 13], [156, 45, 29, 15], [148, 42, 27, 14], [162, 48, 31, 16],
+const traffic = [42,34,28,36,30,24,18,22,27,42,31,39,35,46,54,45,41,50,62,70,66,74,69,82,76,80,78,92,84,89,96,101,94,109,113,106,118,121,111,105,116,124,132,128,140,152,145,160]
+const suspicious = [8,6,5,8,4,7,5,6,7,12,9,11,8,15,16,13,12,18,15,24,20,29,25,34,28,31,26,42,37,39,45,36,42,48,51,44,49,56,42,38,51,45,58,62,54,67,59,72]
+const alerts = [
+  { time: '12:42:18', source: '192.168.1.87', destination: '10.0.0.14', type: 'PORT SCAN', severity: 'HIGH', action: 'BLOCKED' },
+  { time: '12:39:04', source: '45.142.212.19', destination: '10.0.0.21', type: 'BRUTE FORCE', severity: 'CRITICAL', action: 'BLOCKED' },
+  { time: '12:31:55', source: '192.168.1.44', destination: '10.0.0.14', type: 'ANOMALOUS FLOW', severity: 'MEDIUM', action: 'MONITORED' },
+  { time: '12:26:11', source: '103.27.186.4', destination: '10.0.0.8', type: 'DOS / FLOOD', severity: 'HIGH', action: 'BLOCKED' },
+  { time: '12:18:49', source: '192.168.1.112', destination: '10.0.0.14', type: 'DNS TUNNEL', severity: 'LOW', action: 'MONITORED' },
 ]
+const nav = [
+  ['Dashboard', LayoutDashboard], ['Network Traffic', Network], ['Intrusion Alerts', ShieldAlert],
+  ['Blocked IPs', Ban], ['Detection & Prevention', Shield], ['Settings', Settings],
+] as const
 
-const navItems = [
-  { label: 'Dashboard', icon: Home },
-  { label: 'Network Traffic', icon: Network },
-  { label: 'Intrusion Alerts', icon: ShieldAlert },
-  { label: 'Blocked IPs', icon: LockKeyhole },
-  { label: 'Detection & Prevention', icon: Shield },
-  { label: 'Settings', icon: Settings },
-]
-
-function Status({ color, children }: { color: string; children: React.ReactNode }) {
-  return <div className="status-line"><span className="status-dot" style={{ backgroundColor: color }} />{children}</div>
+function Panel({ title, eyebrow, children, className = '' }: { title: string; eyebrow?: string; children: React.ReactNode; className?: string }) {
+  return <section className={`terminal-panel ${className}`}><div className="panel-title"><span>{eyebrow ?? '//'} </span>{title}<b>+</b></div>{children}</section>
 }
 
-function Sidebar() {
+function MiniBarChart({ range }: { range: string }) {
+  const scale = range === '1H' ? 0.42 : range === '7D' ? 1.35 : 1
+  return <div className="chart-box"><div className="chart-y"><span>2.5K</span><span>1.8K</span><span>1.2K</span><span>600</span><span>0</span></div><div className="plot"><div className="chart-grid" /> <div className="bar-row">{traffic.map((value, i) => <div className="bar" key={i}><i style={{ height: `${Math.min(98, value * scale / 1.65)}%` }} /><em style={{ height: `${Math.min(38, suspicious[i] * scale / 1.9)}%` }} /></div>)}</div><div className="chart-x"><span>14:00</span><span>18:00</span><span>22:00</span><span>02:00</span><span>06:00</span><span>10:00</span><span>12:00</span></div></div></div>
+}
+
+function ActivityChart() {
+  const bars = Array.from({ length: 48 }, (_, i) => 14 + ((i * 17) % 46) + (i > 34 ? 16 : 0))
+  return <div className="chart-box"><div className="chart-y"><span>250</span><span>188</span><span>125</span><span>62</span><span>0</span></div><div className="plot"><div className="chart-grid" /><div className="bar-row activity-bars">{bars.map((value, i) => <div className="bar" key={i}><i style={{ height: `${value}%` }} /><em style={{ height: `${Math.max(4, value * .32)}%` }} /><strong style={{ height: `${Math.max(3, value * .15)}%` }} /></div>)}</div><div className="chart-x"><span>14:00</span><span>18:00</span><span>22:00</span><span>02:00</span><span>06:00</span><span>10:00</span><span>12:00</span></div></div></div>
+}
+
+function Donut({ title, values, labels, colors }: { title: string; values: number[]; labels: string[]; colors: string[] }) {
+  let start = 0
+  const gradient = values.map((value, i) => { const end = start + value * 3.6; const part = `${colors[i]} ${start}deg ${end}deg`; start = end; return part }).join(', ')
+  return <Panel title={title} className="donut-panel"><div className="donut-layout"><div className="donut" style={{ background: `conic-gradient(${gradient})` }}><div><b>{values[0]}%</b><small>PRIMARY</small></div></div><div className="legend-list">{labels.map((label, i) => <div key={label}><i style={{ background: colors[i] }} /> <span>{label}</span><b>{values[i]}%</b></div>)}</div></div></Panel>
+}
+
+function Sidebar({ active, setActive }: { active: string; setActive: (value: string) => void }) {
   const [collapsed, setCollapsed] = useState(false)
-  return (
-    <aside className={`sidebar ${collapsed ? 'sidebar-collapsed' : ''}`}>
-      <div className="brand"><Shield className="brand-icon" /><span>NIDPS</span></div>
-      <div className="system-card">
-        <div className="system-title">Network Security</div>
-        <Status color="#39ad35">Detection: Active</Status>
-        <Status color="#39ad35">Prevention: Active</Status>
-        <Status color="#39ad35">Network: Connected</Status>
-        <Status color="#e6a52f"><Cpu /> CPU: 12%</Status>
-        <Status color="#ef4a40"><Flame /> Temperature: 48°C</Status>
-      </div>
-      <nav className="nav-list" aria-label="Main navigation">
-        {navItems.map(({ label, icon: Icon }, index) => <a className={`nav-item ${index === 0 ? 'active' : ''}`} href="#" key={label}><Icon /><span>{label}</span></a>)}
-      </nav>
-      <button className="collapse-button" onClick={() => setCollapsed(!collapsed)} aria-label="Toggle sidebar"><ChevronLeft /></button>
-    </aside>
-  )
-}
-
-function Header() {
-  return <header className="topbar"><div className="topbar-left"><button className="mobile-menu" aria-label="Open menu"><Menu /></button><span className="header-mark"><Shield /></span><span className="header-name">NIDPS Administration</span></div><div className="hostname">hostname: <strong>nidps-sensor</strong><button aria-label="System menu"><Menu /></button></div></header>
-}
-
-function StatCard({ title, value, detail, color, icon: Icon }: { title: string; value: string; detail: string; color: string; icon: typeof Activity }) {
-  return <section className="stat-card" style={{ backgroundColor: color }}><div className="stat-copy"><h2>{title}</h2><strong>{value}</strong></div><Icon className="stat-icon" /><div className="stat-footer">{detail}<ChevronRight /></div></section>
-}
-
-function GridChart({ title, type }: { title: string; type: 'traffic' | 'activity' }) {
-  const values = type === 'traffic' ? traffic : activity
-  const labels = ['14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '23:00', '00:00', '01:00', '02:00', '03:00', '04:00', '05:00', '06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00']
-  const max = type === 'traffic' ? 190 : 250
-  const barWidth = 100 / values.length
-  return <section className="panel chart-panel"><div className="panel-heading"><h2>{title}</h2><div className="legend">{type === 'traffic' ? <><span><i className="legend-gray" /> Normal</span><span><i className="legend-green" /> Suspicious</span></> : <><span><i className="legend-red" /> DoS/DDoS</span><span><i className="legend-blue" /> Port Scan</span><span><i className="legend-orange" /> Brute Force</span><span><i className="legend-purple" /> Other</span></>}</div></div><div className="chart-wrap"><div className="y-axis">{[max, Math.round(max * .75), Math.round(max * .5), Math.round(max * .25), 0].map((n) => <span key={n}>{n.toLocaleString()}</span>)}</div><div className="plot"><div className="grid-lines">{[0, 25, 50, 75, 100].map((n) => <i key={n} style={{ bottom: `${n}%` }} />)}</div><div className="bars">{values.map((value, i) => { const stacks = type === 'traffic' ? [value, suspicious[i]] : activity[i]; return <div className="bar-group" key={i}>{stacks.map((stack, j) => <span key={j} className={`bar-segment ${type === 'traffic' ? (j === 0 ? 'normal' : 'suspicious') : ['attack-red', 'attack-blue', 'attack-orange', 'attack-purple'][j]}`} style={{ height: `${(stack / max) * 100}%` }} />)}</div> })}</div><div className="x-axis">{labels.map((label, i) => <span key={label} style={{ left: `${(i / (labels.length - 1)) * 100}%` }}>{label}</span>)}</div></div></div></section>
-}
-
-function Donut({ title, segments, colors, labels }: { title: string; segments: number[]; colors: string[]; labels: string[] }) {
-  const total = segments.reduce((a, b) => a + b, 0)
-  let current = 0
-  const conic = segments.map((value, i) => { const start = current; current += (value / total) * 360; return `${colors[i]} ${start}deg ${current}deg` }).join(', ')
-  return <section className="panel donut-panel"><div className="panel-heading"><h2>{title}</h2></div><div className="donut-content"><div className="donut" style={{ background: `conic-gradient(${conic})` }}><div /></div><div className="donut-legend">{labels.map((label, i) => <span key={label}><i style={{ background: colors[i] }} />{label}<b>{segments[i]}%</b></span>)}</div></div></section>
+  return <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}><div className="brand"><span className="brand-mark">[+]</span><div><strong>NIDPS</strong><small>NETWORK SECURITY SYSTEM</small></div></div><div className="system-status"><div className="status-heading">SYSTEM STATUS</div><p><Check /> [OK] DETECTION ACTIVE</p><p><Check /> [OK] PREVENTION ACTIVE</p><p><Wifi /> [OK] NETWORK CONNECTED</p><div className="resource"><span><Cpu /> CPU: <b>12%</b></span><span><HardDrive /> MEM: <b>26%</b></span><span>◉ TEMP: <b>48°C</b></span></div></div><nav aria-label="Primary navigation">{nav.map(([label, Icon]) => <button key={label} className={active === label ? 'active' : ''} onClick={() => setActive(label)}><Icon /><span>{label}</span></button>)}</nav><div className="sidebar-bottom"><button><Terminal /><span>ADMINISTRATOR</span></button><button><X /><span>LOGOUT</span></button></div><button className="collapse" onClick={() => setCollapsed(!collapsed)} aria-label="Toggle navigation"><ChevronDown /></button></aside>
 }
 
 export default function Page() {
-  return <div className="nidps-shell"><Sidebar /><div className="main-area"><Header /><main className="dashboard"><div className="stats-grid"><StatCard title="Packets Analyzed" value="155,322" detail="26 active sensors" color="#087b9d" icon={Globe2} /><StatCard title="Intrusions Detected" value="1,245" detail="Review alerts" color="#a83229" icon={ShieldAlert} /><StatCard title="Threats Blocked" value="66.6%" detail="View detections" color="#b66b17" icon={CircleGauge} /><StatCard title="Blocked IPs" value="42" detail="Manage blocked IPs" color="#006034" icon={LockKeyhole} /></div><GridChart title="Network Traffic Over Last 24 Hours" type="traffic" /><GridChart title="Intrusion Activity Over Last 24 Hours" type="activity" /><div className="donut-grid"><Donut title="Traffic Protocol Distribution" segments={[64, 22, 8, 6]} colors={['#ff6058', '#0ba9d5', '#1681bb', '#b6c0d0']} labels={['TCP', 'UDP', 'ICMP', 'Other']} /><Donut title="Detected Threat Types" segments={[48, 27, 15, 10]} colors={['#ff6058', '#0ba9d5', '#ff9f2f', '#8b43a6']} labels={['DoS/DDoS', 'Port Scan', 'Brute Force', 'Other']} /></div></main></div></div>
+  const [active, setActive] = useState('Dashboard')
+  const [range, setRange] = useState('24H')
+  const [query, setQuery] = useState('')
+  const filteredAlerts = useMemo(() => alerts.filter((row) => Object.values(row).join(' ').toLowerCase().includes(query.toLowerCase())), [query])
+  return <div className="nidps-shell"><Sidebar active={active} setActive={setActive} /><div className="main-area"><header className="topbar"><div><button className="mobile-menu" aria-label="Open menu"><Menu /></button><span className="prompt">root@nidps</span><span className="slash">:</span><span className="path">/var/log/security</span><span className="cursor">_</span></div><div className="top-meta"><span><span className="online-dot" /> SENSOR ONLINE</span><span>HOST: <b>nidps-sensor</b></span><button aria-label="Open settings"><Settings /></button></div></header><main className="dashboard"><div className="page-heading"><div><p className="eyebrow">// NIDPS CORE / OVERVIEW</p><h1>NETWORK SECURITY MONITOR</h1></div><div className="live-badge"><Activity /> LIVE FEED <span>●</span></div></div><div className="stats-grid"><article className="metric cyan"><span>PACKETS ANALYZED</span><strong>155,322</strong><small>↗ VIEW TRAFFIC</small></article><article className="metric red"><span>INTRUSIONS DETECTED</span><strong>1,245</strong><small>↗ VIEW ALERTS</small></article><article className="metric amber"><span>THREATS BLOCKED</span><strong>66.6%</strong><small>↗ PREVENTION STATS</small></article><article className="metric green"><span>BLOCKED IPs</span><strong>42</strong><small>↗ MANAGE BLOCKLIST</small></article></div><Panel title="NETWORK TRAFFIC — LAST 24 HOURS" eyebrow="01 /" className="chart-panel"><div className="panel-tools"><div className="chart-legend"><span><i className="key normal" /> NORMAL</span><span><i className="key suspicious" /> SUSPICIOUS</span></div><div className="range-tabs">{['1H', '24H', '7D'].map((item) => <button key={item} className={range === item ? 'selected' : ''} onClick={() => setRange(item)}>{item}</button>)}</div></div><MiniBarChart range={range} /></Panel><Panel title="INTRUSION ACTIVITY — LAST 24 HOURS" eyebrow="02 /" className="chart-panel"><div className="panel-tools"><div className="chart-legend"><span><i className="key danger" /> DOS / DDOS</span><span><i className="key cyan-key" /> PORT SCAN</span><span><i className="key amber-key" /> BRUTE FORCE</span><span><i className="key purple-key" /> OTHER</span></div><span className="chart-note">MODEL: NIDPS-ML v1.4</span></div><ActivityChart /></Panel><div className="donut-grid"><Donut title="TRAFFIC PROTOCOLS" values={[64,22,8,6]} labels={['TCP', 'UDP', 'ICMP', 'OTHER']} colors={['#00d4ff','#00ff88','#ffb000','#6b7280']} /><Donut title="DETECTED THREAT TYPES" values={[48,27,15,10]} labels={['DOS / DDOS','PORT SCAN','BRUTE FORCE','OTHER']} colors={['#ff3366','#00d4ff','#ffb000','#b45cff']} /></div><Panel title="RECENT INTRUSION ALERTS" eyebrow="05 /" className="alerts-panel"><div className="table-tools"><span className="table-caption">// LATEST EVENTS / 5 OF 1,245</span><label><Search /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="FILTER SOURCE, TYPE..." /></label><button className="outline-button">VIEW ALL ALERTS <ArrowUpRight /></button></div><div className="table-wrap"><table><thead><tr><th>TIMESTAMP</th><th>SOURCE IP</th><th>DESTINATION</th><th>ATTACK TYPE</th><th>SEVERITY</th><th>ACTION</th></tr></thead><tbody>{filteredAlerts.map((row) => <tr key={row.time}><td>{row.time}</td><td>{row.source}</td><td>{row.destination}</td><td>{row.type}</td><td><span className={`severity ${row.severity.toLowerCase()}`}>{row.severity}</span></td><td className={row.action === 'BLOCKED' ? 'action-blocked' : 'action-monitor'}>{row.action}</td></tr>)}</tbody></table></div></Panel></main></div></div>
 }
